@@ -1,6 +1,6 @@
 import argparse
 from dataclasses import dataclass
-from typing import List
+from typing import List, Set
 from datetime import datetime, timezone
 import logging
 import json
@@ -77,18 +77,31 @@ class SwurApp:
             )
 
         return tracked
-
+        
+    def get_series_history(self, seriesId: int) -> Set[int]:
+        filteredEps = set()
+        params = { "seriesId": seriesId, "eventType": "downloadFolderImported"}
+        response = self.sonarr_client.call_endpoint("GET", "/history/series", params=params)     
+        items = json.loads(response.read().decode())
+        for item in items:
+            if item.get('customFormatScore') > 80:
+                filteredEps.add(int(item.get('episodeId')))
+        
+        return filteredEps
+        
     def track_episodes(self, tracked_series_ids: List[Series]) -> None:
         episodes_to_monitor = []
         episodes_to_unmonitor = []
 
         for series in tracked_series_ids:
+            filteredEps = self.get_series_history(int(serieId)) 
+            
             episodes = self.get_episodes_for_series(series.id, series.latest_season)
 
             for episode in episodes:
-                if episode.has_aired and not episode.is_monitored:
+                if episode.has_aired and not episode.is_monitored and not int(episode.id) in filteredEps:
                     episodes_to_monitor.append(episode)
-                elif not episode.has_aired and episode.is_monitored:
+                elif (not episode.has_aired and episode.is_monitored) or (int(episode.id) in filteredEps and episode.is_monitored):
                     episodes_to_unmonitor.append(episode)
 
         # Monitor and unmonitor the episodes in bulk to reduce our API calls
