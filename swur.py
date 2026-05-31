@@ -26,10 +26,11 @@ class Episode:
 
 
 class SwurApp:
-    def __init__(self, api_key, base_url, tag_name):
+    def __init__(self, api_key, base_url, tag_name, cutoff_score):
         self.logger = logging.getLogger(__name__)
         self.sonarr_client = SonarrClient(base_url, api_key)
         self.tag_name = tag_name
+        self.cutoff_score = cutoff_score
 
     def run(self) -> None:
         ignore_tag_id = self.get_tag_id()
@@ -84,7 +85,7 @@ class SwurApp:
         response = self.sonarr_client.call_endpoint("GET", "/history/series", params=params)     
         items = json.loads(response.read().decode())
         for item in items:
-            if item.get('customFormatScore') > 80:
+            if item.get('customFormatScore') > self.cutoff_score:
                 filteredEps.add(int(item.get('episodeId')))
         
         return filteredEps
@@ -168,9 +169,9 @@ if __name__ == "__main__":
     parser.add_argument("--base-url", required=True, help="(Required) The base URL (scheme, host, and port) for the Sonarr instance")
     parser.add_argument("--ignore-tag-name", help="(Optional) The name of the tag for series that swurApp should NOT track. \"ignore\" by default.", default="ignore")
     parser.add_argument("--log-level", help="(Optional) Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
-
+    parser.add_argument("--cutoff-score", required=True, help="Minimum custom format score to unmonitor")
     args = parser.parse_args()
 
     logging.basicConfig(level=_resolve_log_level(args.log_level))
-    app = SwurApp(args.api_key, args.base_url, args.ignore_tag_name)
+    app = SwurApp(args.api_key, args.base_url, args.ignore_tag_name, args.cutoff_score)
     app.run()

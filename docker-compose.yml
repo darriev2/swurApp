@@ -7,6 +7,7 @@ services:
       - BASE_URL=
       - IGNORE_TAG_NAME=ignore
       - DELAY_IN_MINUTES=60
+      - CUTOFF_SCORE=100
       # Optional
       #- LOG_LEVEL=INFO
       #- TZ= # From IANA TZ database (see https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List )
